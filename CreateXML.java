@@ -1,17 +1,5 @@
-// file:       CreateXML.java
-// author:     Michael Gonzalez
-// class:      cs211e
-// date:       May 22, 2017
-// assignment: Quiz 2
-// objective:  Programmatically create an XML file that contains
-//             the properties from the System.
-//
-//             The output will verify if the XML is valid
-//************************************************************************
 package CreateXML;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -29,69 +17,75 @@ import org.w3c.dom.Element;
 
 public class CreateXML
 {
-    private static Map<String, ArrayList<String>> propMap = new HashMap<>();
+
     //*****************( fillPropertyMap() )******************************
-    private static void fillPropertyMap()
+    private static void fillPropertyMap(Map map)
     {
-        ArrayList<String> javaArray = new ArrayList<>();
-        ArrayList<String> osArray = new ArrayList<>();
-        ArrayList<String> userArray = new ArrayList<>();
-        javaArray.add("version");
-        javaArray.add("home");
-        javaArray.add("vendor");
-        osArray.add("name");
-        osArray.add("version");
-        osArray.add("arch");
-        userArray.add("name");
-        userArray.add("home");
-        userArray.add("dir");
-        propMap.put("java", javaArray);
-        propMap.put("os", osArray);
-        propMap.put("user", userArray);
+        String[] javaArray = {"version", "home", "vendor"};
+        String[] osArray = {"name", "version", "arch"};
+        String[] userArray = {"name", "home", "dir"};
+        map.put("java", javaArray);
+        map.put("os", osArray);
+        map.put("user", userArray);
     }//fillPropertyMap()
+
+    //*****************( getDocument() )******************************
+    private static Document getDocument() throws ParserConfigurationException
+    {
+        DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
+        return docBuilder.newDocument();
+    }
+
+    //*****************( buildXMLDoc() )******************************
+    private static void buildXMLDoc(Document doc, Map propMap)
+    {
+        Element rootElement = doc.createElement("properties");
+        doc.appendChild(rootElement);
+        Set<String> keySet = propMap.keySet();
+        System.out.println("\nOutput: \n");
+        for(String key: keySet)
+        {
+            Element child1 = doc.createElement(key);
+            rootElement.appendChild(child1);
+            if(propMap.containsKey(key))
+            {
+                String[] stringArray = (String[]) propMap.get(key); //Not sure why I have to cast when I wrapped the code in a method.  It worked when it was in main()
+                for(String innerElement: stringArray)
+                {
+                    Element child2 = doc.createElement(innerElement);
+                    child2.appendChild(doc.createTextNode(System.getProperty(key+"."+innerElement)));
+                    child1.appendChild(child2);
+                }
+            }
+        }
+    }
+
+    //*****************( displayXMLDoc() )******************************
+    private static void displayXMLDoc(Document doc) throws TransformerException
+    {
+        TransformerFactory transformerFactory = TransformerFactory.newInstance();
+        Transformer transformer = transformerFactory.newTransformer();
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "3");
+        DOMSource source = new DOMSource(doc);
+        //The following line creates and stores an XML file instead:
+        //   StreamResult result = new StreamResult(new File(
+        //   "/Users/me/Documents/javaEE_workspace/java_xml/src/java_xml/properties.xml"));
+        StreamResult result = new StreamResult(System.out);
+        transformer.transform(source, result);
+    }
+
     //*****************( main() )*****************************************
     public static void main(String...arg)
     {
-        fillPropertyMap();
+        Map<String, String[]> propMap = new HashMap<>();
+        fillPropertyMap(propMap);
         try
         {
-            DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
-            Document doc = docBuilder.newDocument();
-            Element rootElement = doc.createElement("properties");
-            doc.appendChild(rootElement);
-            Set<String> keySet = propMap.keySet();
-            System.out.println("Output:\n");
-            for(String key: keySet)
-            {
-                Element child1 = doc.createElement(key);
-                rootElement.appendChild(child1);
-                if(propMap.containsKey(key))
-                {
-                    ArrayList<String> arrayList = propMap.get(key);
-                    Object[] objectList = arrayList.toArray();
-                    String[] stringArray = Arrays.copyOf(objectList, objectList.length, String[].class);
-                    for(String innerElement: stringArray)
-                    {
-                        Element child2 = doc.createElement(innerElement);
-                        child2.appendChild(doc.createTextNode(System.getProperty(key+"."+innerElement)));
-                        child1.appendChild(child2);
-                    }
-
-                }
-
-            }//for(set)
-
-            TransformerFactory transformerFactory = TransformerFactory.newInstance();
-            Transformer transformer = transformerFactory.newTransformer();
-            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "3");
-            DOMSource source = new DOMSource(doc);
-//The following line creates an XML file
-//StreamResult result = new StreamResult(new File("/Users/michaelgonzalez/Documents/javaEE_workspace/java_xml/src/java_xml/properties.xml"));
-            StreamResult result = new StreamResult(System.out);
-            transformer.transform(source, result);
-
+            Document doc = getDocument();
+            buildXMLDoc(doc, propMap);
+            displayXMLDoc(doc);
         }
         catch (ParserConfigurationException|TransformerException e)
         {
